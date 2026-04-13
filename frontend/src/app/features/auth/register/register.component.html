@@ -1,0 +1,76 @@
+<div class="auth-container">
+  <mat-card class="auth-card">
+    <mat-card-header>
+      <mat-card-title>
+        <span class="brew-title">🍺 BrewMaster</span>
+      </mat-card-title>
+      <mat-card-subtitle>Create your account</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <form [formGroup]="form" (ngSubmit)="submit()" class="auth-form">
+
+        <app-error-message [message]="errorMessage()" />
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Username</mat-label>
+          <input matInput formControlName="username" autocomplete="username" />
+          @if (form.get('username')?.errors?.['required'] && form.get('username')?.touched) {
+            <mat-error>Username is required</mat-error>
+          } @else if (form.get('username')?.errors?.['minlength']) {
+            <mat-error>Minimum 3 characters</mat-error>
+          } @else if (form.get('username')?.errors?.['pattern']) {
+            <mat-error>Only letters, digits, and underscores allowed</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Email</mat-label>
+          <input matInput formControlName="email" type="email" autocomplete="email" />
+          @if (form.get('email')?.errors?.['required'] && form.get('email')?.touched) {
+            <mat-error>Email is required</mat-error>
+          } @else if (form.get('email')?.errors?.['email']) {
+            <mat-error>Enter a valid email address</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Password</mat-label>
+          <input matInput formControlName="password"
+                 [type]="hidePassword() ? 'password' : 'text'"
+                 autocomplete="new-password" />
+          <button mat-icon-button matSuffix type="button"
+                  (click)="hidePassword.set(!hidePassword())">
+            <mat-icon>{{ hidePassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+          @if (form.get('password')?.errors?.['required'] && form.get('password')?.touched) {
+            <mat-error>Password is required</mat-error>
+          } @else if (form.get('password')?.errors?.['minlength']) {
+            <mat-error>Minimum 8 characters</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Display Name (optional)</mat-label>
+          <input matInput formControlName="displayName" autocomplete="name" />
+        </mat-form-field>
+
+        <button mat-raised-button color="primary" type="submit"
+                class="full-width submit-btn" [disabled]="loading()">
+          @if (loading()) {
+            <mat-spinner diameter="20" />
+          } @else {
+            Create Account
+          }
+        </button>
+
+      </form>
+    </mat-card-content>
+
+    <mat-card-actions>
+      <p class="auth-link">
+        Already have an account? <a routerLink="/login">Sign in</a>
+      </p>
+    </mat-card-actions>
+  </mat-card>
+</div>

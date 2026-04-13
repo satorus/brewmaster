@@ -1,0 +1,13 @@
+spring:
+  jpa:
+    show-sql: true
+  devtools:
+    restart:
+      enabled: true
+
+logging:
+  level:
+    com.brewmaster: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE

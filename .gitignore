@@ -1,0 +1,100 @@
+# =============================================================================
+# BrewMaster — .gitignore
+# Stack: Spring Boot 3 / Java 21 / Maven  +  Angular 17  +  PostgreSQL / Docker
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Secrets & environment
+# -----------------------------------------------------------------------------
+.env
+.env.local
+.env.*.local
+
+# -----------------------------------------------------------------------------
+# Java / Maven (backend)
+# -----------------------------------------------------------------------------
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+
+# Compiled class files
+*.class
+
+# Package files
+*.jar
+*.war
+*.ear
+*.nar
+
+# Maven wrapper (keep .mvn/wrapper/maven-wrapper.properties if you use it)
+!.mvn/wrapper/maven-wrapper.properties
+
+# Log files
+*.log
+logs/
+
+# Spring Boot specific
+backend/src/main/resources/application-local.yml
+
+# -----------------------------------------------------------------------------
+# Angular / Node (frontend)
+# -----------------------------------------------------------------------------
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+
+# Angular cache
+frontend/.angular/cache/
+
+# npm / yarn
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/.pnp
+frontend/.pnp.js
+
+# Test coverage
+frontend/coverage/
+
+# -----------------------------------------------------------------------------
+# Docker
+# -----------------------------------------------------------------------------
+# Don't ignore docker-compose.override.yml if you commit it, but local overrides:
+docker-compose.override.yml
+
+# -----------------------------------------------------------------------------
+# IntelliJ IDEA
+# -----------------------------------------------------------------------------
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Keep these if you want to share run configs / code style with the team:
+# !.idea/runConfigurations/
+# !.idea/codeStyles/
+
+# -----------------------------------------------------------------------------
+# VS Code
+# -----------------------------------------------------------------------------
+.vscode/
+!.vscode/extensions.json
+
+# -----------------------------------------------------------------------------
+# OS generated
+# -----------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# -----------------------------------------------------------------------------
+# Misc
+# -----------------------------------------------------------------------------
+*.swp
+*.swo
+*~
