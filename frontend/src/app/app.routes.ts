@@ -13,6 +13,12 @@ export const routes: Routes = [
       import('./features/auth/register/register.component').then(m => m.RegisterComponent)
   },
   {
+    path: 'calendar',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/calendar/calendar.component').then(m => m.CalendarComponent)
+  },
+  {
     path: 'dashboard',
     canActivate: [authGuard],
     loadComponent: () =>
@@ -20,11 +26,11 @@ export const routes: Routes = [
   },
   {
     path: '',
-    redirectTo: 'dashboard',
+    redirectTo: 'calendar',
     pathMatch: 'full'
   },
   {
     path: '**',
-    redirectTo: 'dashboard'
+    redirectTo: 'calendar'
   }
 ];

@@ -37,6 +37,7 @@ public class AuthController {
     @GetMapping("/me")
     @Operation(summary = "Get the currently authenticated user")
     public ResponseEntity<AuthResponse.UserDto> me(@AuthenticationPrincipal User user) {
+        if (user == null) return ResponseEntity.status(401).build();
         return ResponseEntity.ok(
                 new AuthResponse.UserDto(user.getId(), user.getUsername(), user.getDisplayName(), user.getRole())
         );

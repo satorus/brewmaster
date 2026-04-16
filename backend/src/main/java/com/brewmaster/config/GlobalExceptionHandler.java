@@ -8,6 +8,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.stream.Collectors;
@@ -54,6 +55,15 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleIllegalState(IllegalStateException ex,
                                                              HttpServletRequest request) {
         return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ErrorResponse> handleResponseStatus(ResponseStatusException ex, HttpServletRequest request) {
+        int code = ex.getStatusCode().value();
+        HttpStatus status = HttpStatus.resolve(code);
+        String phrase = status != null ? status.getReasonPhrase() : "Error";
+        return ResponseEntity.status(code).body(new ErrorResponse(
+                Instant.now().toString(), code, phrase, ex.getReason(), request.getRequestURI()));
     }
 
     @ExceptionHandler(Exception.class)

@@ -23,6 +23,18 @@
         <springdoc.version>2.5.0</springdoc.version>
     </properties>
 
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>me.paulschwarz</groupId>
+                <artifactId>spring-dotenv-bom</artifactId>
+                <version>5.1.0</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <!-- Web -->
         <dependency>
@@ -87,6 +99,13 @@
             <version>${springdoc.version}</version>
         </dependency>
 
+        <!-- .env file support -->
+        <dependency>
+            <groupId>me.paulschwarz</groupId>
+            <artifactId>springboot3-dotenv</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- DevTools (hot reload in dev) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -118,6 +137,11 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <systemPropertyVariables>
+                        <springdotenv.directory>../</springdotenv.directory>
+                    </systemPropertyVariables>
+                </configuration>
             </plugin>
         </plugins>
     </build>
