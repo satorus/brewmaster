@@ -1,8 +1,9 @@
 # BrewMaster — Application Specification
 
-> **Version:** 1.0.0  
+> **Version:** 2.0.0  
 > **Target Audience:** Claude Code  
-> **Status:** Initial Specification
+> **Status:** Updated — Provider-agnostic AI client architecture  
+> **Changelog:** v2.0.0 — Replaced hardcoded Anthropic dependency with a pluggable `AIClient` interface supporting both Anthropic Claude and Google Gemini as interchangeable providers, configurable via environment variable.
 
 ---
 
@@ -40,6 +41,7 @@
 - Leverage AI and real-time web search to assist with recipe discovery and ingredient sourcing.
 - Guide users through the brewing process with precise, parameterized instructions.
 - Be fully usable on mobile devices (phones and tablets).
+- Keep AI provider costs flexible — the AI backend is swappable between providers via a single config value.
 
 ---
 
@@ -55,8 +57,10 @@
 | **Database** | PostgreSQL 15+ | Primary data store |
 | **ORM** | Spring Data JPA / Hibernate | |
 | **Authentication** | Spring Security + JWT | Username/password auth |
-| **AI Integration** | Anthropic Claude API (claude-sonnet-4-20250514) | Recipe finder & order feature |
-| **Web Search** | Anthropic Web Search Tool (built-in to Claude API) | Used within AI features |
+| **AI Integration** | Pluggable `AIClient` interface | Supports Anthropic Claude and Google Gemini; provider selected via `AI_PROVIDER` env var |
+| **AI Provider A** | Anthropic Claude API (`claude-sonnet-4-20250514`) | Paid — high quality; requires `ANTHROPIC_API_KEY` |
+| **AI Provider B** | Google Gemini API (`gemini-2.5-flash`) | Free tier available; requires `GEMINI_API_KEY` |
+| **Web Search** | Built-in per provider — Anthropic web search tool / Gemini Google Search grounding | Enabled automatically by the active provider implementation |
 | **Containerization** | Docker + Docker Compose | Local development & deployment |
 | **API Documentation** | SpringDoc OpenAPI (Swagger UI) | Auto-generated |
 
@@ -78,8 +82,13 @@
 │  │ Auth Module  │  │ Recipe Module│  │  Calendar Module │  │
 │  └──────────────┘  └──────────────┘  └──────────────────┘  │
 │  ┌──────────────┐  ┌──────────────────────────────────────┐ │
-│  │ Order Module │  │       AI Service (Claude API)        │ │
-│  └──────────────┘  └──────────────────────────────────────┘ │
+│  │ Order Module │  │  AI Layer (provider-agnostic)        │ │
+│  └──────────────┘  │  ┌────────────┐  ┌───────────────┐  │ │
+│                    │  │AIClient    │  │AIClient       │  │ │
+│                    │  │(Anthropic) │  │(Gemini)       │  │ │
+│                    │  └────────────┘  └───────────────┘  │ │
+│                    │     selected via AI_PROVIDER env var  │ │
+│                    └──────────────────────────────────────┘ │
 │                             │                                │
 │               Spring Data JPA / Hibernate                    │
 └────────────────────────────┬────────────────────────────────┘
@@ -89,15 +98,17 @@
 │                  PostgreSQL Database (port 5432)             │
 └─────────────────────────────────────────────────────────────┘
 
-External Services:
-  • Anthropic API  →  AI text generation + web search
+External Services (one active at a time):
+  • Anthropic API  →  AI text generation + web search  (AI_PROVIDER=anthropic)
+  • Google Gemini  →  AI text generation + Google Search grounding  (AI_PROVIDER=gemini)
 ```
 
 ### Communication
 
 - All API calls are authenticated via **JWT Bearer tokens**.
 - The Angular frontend communicates with the backend exclusively through versioned REST endpoints (`/api/v1/...`).
-- The backend calls the Anthropic API server-side; the API key is **never exposed to the frontend**.
+- The backend calls the AI provider API server-side; API keys are **never exposed to the frontend**.
+- Switching AI providers requires only changing `AI_PROVIDER` (and ensuring the corresponding API key is set) in `.env` and restarting the backend. No code changes needed.
 
 ---
 
@@ -149,9 +160,16 @@ brewmaster/
 │       │   │   ├── OrderService.java
 │       │   │   └── OrderController.java
 │       │   └── ai/
-│       │       ├── AnthropicClient.java
-│       │       ├── RecipeAiService.java
-│       │       └── OrderAiService.java
+│       │       ├── AIClient.java                  ← interface (provider contract)
+│       │       ├── AIRequest.java                 ← shared request record
+│       │       ├── AIResponse.java                ← shared response record
+│       │       ├── AIJsonUtil.java                ← shared JSON extraction utility
+│       │       ├── anthropic/
+│       │       │   └── AnthropicAIClient.java     ← Anthropic implementation
+│       │       ├── gemini/
+│       │       │   └── GeminiAIClient.java        ← Gemini implementation
+│       │       ├── RecipeAiService.java            ← uses AIClient, provider-agnostic
+│       │       └── OrderAiService.java             ← uses AIClient, provider-agnostic
 │       └── resources/
 │           ├── application.yml
 │           ├── application-dev.yml
@@ -485,9 +503,9 @@ A shared calendar view that lets all users see upcoming brewing sessions, create
 - **Month view** as default (Angular Material or a lightweight calendar library such as `ngx-mat-calendar`).
 - **List view** toggle for mobile friendliness.
 - Events are color-coded:
-  - Green: User has RSVP'd YES
-  - Yellow: Pending invitation
-  - Grey: User declined or event is past
+   - Green: User has RSVP'd YES
+   - Yellow: Pending invitation
+   - Grey: User declined or event is past
 - Clicking an event opens a detail sheet/modal showing: title, date, time, location, linked recipe, participant list with RSVP status.
 - A **floating action button (FAB)** opens the "Create Event" form.
 
@@ -507,7 +525,7 @@ A shared calendar view that lets all users see upcoming brewing sessions, create
 
 - On event creation, all invited users receive an entry in `brew_event_participants` with status `PENDING`.
 - The creator is automatically added with status `ACCEPTED`.
-- `GET /api/v1/events?month=2025-04` returns all events in that month.
+- `GET /api/v1/events?month=YYYY-MM` returns all events in that month.
 
 ---
 
@@ -515,7 +533,7 @@ A shared calendar view that lets all users see upcoming brewing sessions, create
 
 #### Description
 
-The user describes the kind of beer they want to brew using taste profile parameters. The backend calls the Claude API with the web search tool enabled. Claude searches for fitting homebrew recipes on the internet and returns structured recipe suggestions that can be saved to the user's recipe library.
+The user describes the kind of beer they want to brew using taste profile parameters. The backend calls the active AI provider (Anthropic or Gemini) with web search enabled. The AI searches for fitting homebrew recipes and returns structured suggestions that can be saved to the recipe library.
 
 #### UI Flow
 
@@ -602,21 +620,17 @@ Response body:
 }
 ```
 
-#### Claude API Prompt Strategy
+#### AI Prompt Strategy
 
-The backend constructs a prompt for Claude that:
+The `RecipeAiService` builds a prompt that is provider-agnostic in content:
 
-1. Instructs it to act as a homebrewing expert.
+1. Instructs the AI to act as a homebrewing expert.
 2. Provides the taste profile in structured form.
-3. Explicitly instructs it to use the web search tool to find 2–4 real homebrew recipes from reputable sources (e.g., homebrewtalk.com, brewersfriend.com, homebrewing.org, brulosophy.com).
+3. Explicitly instructs it to use its web search capability to find 2–4 real homebrew recipes from reputable sources (e.g., homebrewtalk.com, brewersfriend.com, homebrewing.org, brulosophy.com).
 4. Instructs it to return a **strict JSON response** conforming to the recipe schema above — no markdown, no prose.
 5. Includes clear instructions for scaling all ingredients to the target batch volume.
 
-The `AnthropicClient.java` service handles:
-- Building the messages array with the system prompt and user message.
-- Enabling `web_search` tool.
-- Parsing the response (handling tool_use and text blocks).
-- Extracting and deserializing the JSON.
+The `AIClient` implementation in use handles all provider-specific details (tool format, request structure, response parsing) transparently.
 
 ---
 
@@ -633,8 +647,8 @@ When a recipe is loaded into Brew Mode with a volume different from its base vol
 - All ingredient amounts are scaled linearly: `scaled_amount = base_amount × (target_volume / base_volume)`
 - Temperatures remain unchanged.
 - Strike water and sparge water volumes are recalculated using standard homebrewing formulae:
-  - Strike water (L) = `grain_weight_kg × 3.0` (3:1 water-to-grain ratio by mass, adjustable)
-  - Sparge volume = `target_pre_boil_volume - strike_water_volume`
+   - Strike water (L) = `grain_weight_kg × 3.0` (3:1 water-to-grain ratio by mass, adjustable)
+   - Sparge volume = `target_pre_boil_volume - strike_water_volume`
 - Pre-boil volume accounts for evaporation: `pre_boil_volume = target_volume / (1 - boil_off_rate)`, where `boil_off_rate` defaults to 10% per hour.
 - All scaled values are rounded to 2 decimal places.
 
@@ -687,7 +701,7 @@ The backend provides the instruction text with `{ingredient_id}` placeholders; t
 
 #### Description
 
-Based on a selected recipe and the target volume, this feature generates a complete shopping list and uses AI with web search to find the cheapest current offers for each ingredient in Germany.
+Based on a selected recipe and the target volume, this feature generates a complete shopping list and uses the active AI provider with web search to find the cheapest current offers for each ingredient in Germany.
 
 #### UI Flow
 
@@ -701,7 +715,7 @@ Based on a selected recipe and the target volume, this feature generates a compl
    - Shop name & direct link to product page
    - Alternative shop (if found)
 6. **Total estimated cost** shown at the bottom.
-7. User can **export the order list** (copy to clipboard as formatted text, or download as PDF/CSV — v2 feature).
+7. User can **export the order list** (copy to clipboard as formatted text).
 8. The result is automatically saved to `order_lists` table.
 
 #### Backend
@@ -751,13 +765,13 @@ Response:
 }
 ```
 
-#### Claude API Prompt Strategy
+#### AI Prompt Strategy
 
-The backend constructs a prompt that:
+The `OrderAiService` builds a provider-agnostic prompt that:
 
 1. Provides the full scaled ingredient list in JSON format.
-2. Instructs Claude to use the web search tool to find current prices for each ingredient in **German homebrewing online shops** (e.g., braupartner.de, hobbybrauer.de, maischemalzundmehr.de, brouwland.com, brewup.eu).
-3. Instructs Claude to return a **strict JSON response** matching the schema above.
+2. Instructs the AI to use its web search capability to find current prices for each ingredient in **German homebrewing online shops** (e.g., braupartner.de, hobbybrauer.de, maischemalzundmehr.de, brouwland.com, brewup.eu).
+3. Instructs the AI to return a **strict JSON response** matching the schema above.
 4. Includes fallback instruction: if a price cannot be found for an ingredient, include `"bestOffer": null` and note in a `"searchNote"` field.
 5. Explicitly requests EUR pricing only.
 
@@ -815,28 +829,168 @@ Bottom Nav (mobile) / Sidenav (desktop):
 
 ## 10. AI & External Service Integration
 
-### Anthropic Client (`AnthropicClient.java`)
+### Design: Provider-Agnostic AIClient Interface
+
+The entire AI layer is built around a single Java interface. Higher-level services (`RecipeAiService`, `OrderAiService`) only depend on this interface — they have no knowledge of which provider is running underneath.
 
 ```java
-// Core responsibility: Call Anthropic /v1/messages, handle tool_use blocks, extract text response.
-// Configuration via application.yml:
-//   anthropic.api-key: ${ANTHROPIC_API_KEY}
-//   anthropic.model: claude-sonnet-4-20250514
-//   anthropic.max-tokens: 4096
+// ai/AIClient.java
+public interface AIClient {
+
+    /**
+     * Send a prompt to the active AI provider with web search enabled.
+     * Returns the raw text response from the model.
+     */
+    String sendWithWebSearch(AIRequest request) throws AIClientException;
+}
 ```
 
-- All calls are made with the `web_search_20250305` tool enabled.
-- Implement retry logic: 2 retries with exponential backoff on 529 (overload) responses.
-- Implement a **timeout of 60 seconds** per call.
-- Log all AI calls (request/response) at DEBUG level; never log the API key.
-- Handle multi-block responses: concatenate all `text` type content blocks.
+```java
+// ai/AIRequest.java
+public record AIRequest(
+    String systemPrompt,
+    String userMessage,
+    int maxTokens          // defaults to 4096
+) {}
+```
 
-### JSON Extraction
+```java
+// ai/AIResponse.java  (internal use — client implementations use this internally)
+public record AIResponse(String text) {}
+```
 
-Since Claude may occasionally wrap JSON in markdown code fences, implement a utility method that:
-1. Tries `JSON.parse` directly.
-2. Falls back to extracting content between ` ```json ` and ` ``` ` blocks.
-3. Throws a descriptive exception if neither works.
+```java
+// ai/AIClientException.java
+public class AIClientException extends RuntimeException {
+    public AIClientException(String message, Throwable cause) { super(message, cause); }
+}
+```
+
+### Provider Selection
+
+Spring's `@ConditionalOnProperty` is used to load exactly one `AIClient` bean at startup, based on the `ai.provider` config value:
+
+```java
+// anthropic/AnthropicAIClient.java
+@Service
+@ConditionalOnProperty(name = "ai.provider", havingValue = "anthropic")
+public class AnthropicAIClient implements AIClient { ... }
+
+// gemini/GeminiAIClient.java
+@Service
+@ConditionalOnProperty(name = "ai.provider", havingValue = "gemini")
+public class GeminiAIClient implements AIClient { ... }
+```
+
+`ai.provider` is set in `application.yml` and sourced from the `AI_PROVIDER` environment variable.
+
+---
+
+### Anthropic Implementation (`AnthropicAIClient.java`)
+
+Activated when `AI_PROVIDER=anthropic`.
+
+**Configuration (application.yml):**
+```yaml
+anthropic:
+  api-key: ${ANTHROPIC_API_KEY}
+  model: claude-sonnet-4-20250514
+  max-tokens: 4096
+```
+
+**Behaviour:**
+- Calls `POST https://api.anthropic.com/v1/messages`.
+- Enables the `web_search_20250305` tool in every request body.
+- Handles multi-block responses: iterates `content` array, concatenates all blocks where `type == "text"`.
+- Retries up to 2 times with exponential backoff on HTTP 529 (overload) responses.
+- 60-second HTTP client timeout.
+- Logs full request/response body at DEBUG level. **Never logs the API key.**
+
+**Request shape sent to Anthropic:**
+```json
+{
+  "model": "claude-sonnet-4-20250514",
+  "max_tokens": 4096,
+  "tools": [{ "type": "web_search_20250305", "name": "web_search" }],
+  "system": "<system prompt>",
+  "messages": [{ "role": "user", "content": "<user message>" }]
+}
+```
+
+---
+
+### Gemini Implementation (`GeminiAIClient.java`)
+
+Activated when `AI_PROVIDER=gemini`.
+
+**Configuration (application.yml):**
+```yaml
+gemini:
+  api-key: ${GEMINI_API_KEY}
+  model: gemini-2.5-flash
+  max-tokens: 4096
+```
+
+**Behaviour:**
+- Calls `POST https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api-key}`.
+- Enables Google Search grounding by including the `googleSearch` tool in every request.
+- Extracts the text response from `candidates[0].content.parts[0].text`.
+- Retries up to 2 times with exponential backoff on HTTP 429 (rate limit) and 503 responses.
+- 60-second HTTP client timeout.
+- Logs full request/response body at DEBUG level. **Never logs the API key.**
+
+**Request shape sent to Gemini:**
+```json
+{
+  "system_instruction": { "parts": [{ "text": "<system prompt>" }] },
+  "contents": [{ "role": "user", "parts": [{ "text": "<user message>" }] }],
+  "tools": [{ "googleSearch": {} }],
+  "generationConfig": { "maxOutputTokens": 4096 }
+}
+```
+
+---
+
+### Shared JSON Extraction Utility (`AIJsonUtil.java`)
+
+Both providers may occasionally wrap JSON in markdown code fences. A shared utility handles extraction and is used by all AI services:
+
+```java
+public class AIJsonUtil {
+    /**
+     * 1. Try direct JSON parse.
+     * 2. Fall back to extracting content between ```json ... ``` fences.
+     * 3. Throw AIClientException with descriptive message if neither works.
+     */
+    public static String extractJson(String raw) { ... }
+}
+```
+
+---
+
+### Higher-Level AI Services
+
+`RecipeAiService` and `OrderAiService` both inject `AIClient` by interface and are completely unaware of which provider is active:
+
+```java
+@Service
+public class RecipeAiService {
+    private final AIClient aiClient;  // injected — could be Anthropic or Gemini
+
+    public List<RecipeDto> findRecipes(TasteProfileRequest profile) {
+        AIRequest request = new AIRequest(buildSystemPrompt(), buildUserMessage(profile), 4096);
+        String raw = aiClient.sendWithWebSearch(request);
+        String json = AIJsonUtil.extractJson(raw);
+        return parseRecipes(json);
+    }
+}
+```
+
+---
+
+### Rate Limiting
+
+Add `bucket4j` Spring Boot starter to limit AI endpoints to a maximum of **10 AI requests per user per hour** to prevent abuse and unexpected cost overruns on both providers.
 
 ---
 
@@ -848,8 +1002,8 @@ Since Claude may occasionally wrap JSON in markdown code fences, implement a uti
 - **HTTPS**: Required in production. Backend should redirect HTTP → HTTPS.
 - **Input validation**: All incoming DTOs validated with Jakarta Bean Validation (`@NotBlank`, `@Size`, `@Email`, etc.).
 - **SQL Injection**: Not possible via JPA/Hibernate parameterized queries. No raw SQL with string concatenation.
-- **Sensitive data**: `ANTHROPIC_API_KEY` loaded from environment variable only, never committed to source control.
-- **Rate limiting**: Consider adding `bucket4j` Spring Boot starter to limit AI endpoints (e.g., max 10 AI requests per user per hour) to prevent abuse and cost overruns.
+- **Sensitive data**: `ANTHROPIC_API_KEY` and `GEMINI_API_KEY` loaded from environment variables only, never committed to source control. Only the key belonging to the active provider needs to be set.
+- **Rate limiting**: `bucket4j` on AI endpoints (max 10 requests per user per hour).
 
 ---
 
@@ -879,7 +1033,15 @@ These instructions are specifically for **Claude Code** when implementing this a
 - All database schema changes must be done via **Flyway migrations** in `src/main/resources/db/migration/`.
 - Never use `spring.jpa.hibernate.ddl-auto=create` or `update` in non-test code.
 
-### Backend
+### Backend — AI Layer Rules
+
+- `RecipeAiService` and `OrderAiService` **must only depend on the `AIClient` interface**. No imports from the `anthropic` or `gemini` sub-packages are allowed in these classes.
+- `AnthropicAIClient` and `GeminiAIClient` **must not** contain any business logic (prompt construction, JSON schema validation, recipe parsing). They are pure HTTP adapters.
+- All prompt construction lives in the service layer (`RecipeAiService`, `OrderAiService`).
+- `AIJsonUtil.extractJson()` must be used by both services — do not duplicate JSON extraction logic.
+- If adding a third AI provider in the future, only a new implementation of `AIClient` is needed; no existing code should change.
+
+### Backend — General Rules
 
 - Use **constructor injection** for all Spring beans (no `@Autowired` on fields).
 - All service methods that modify data must be `@Transactional`.
@@ -914,6 +1076,8 @@ Provide a `docker-compose.yml` that starts:
 | Backend Unit | JUnit 5 + Mockito | Business logic in services |
 | Backend Integration | MockMvc + @SpringBootTest | All controller endpoints |
 | Repository | @DataJpaTest + H2 | Custom queries |
+| AI Client Unit | JUnit 5 + Mockito (mock HttpClient) | Both `AnthropicAIClient` and `GeminiAIClient` |
+| AI Service Unit | JUnit 5 + Mockito (mock `AIClient`) | `RecipeAiService`, `OrderAiService` |
 | Frontend Unit | Jest | Services, pipes |
 | Frontend E2E | Playwright | Key user journeys (auth, calendar, brew mode) |
 
@@ -937,8 +1101,14 @@ SPRING_DATASOURCE_PASSWORD=changeme_in_production
 JWT_SECRET=your_256_bit_random_secret_here
 JWT_EXPIRATION_MS=28800000
 
-# Anthropic
+# AI Provider — set to either "anthropic" or "gemini"
+AI_PROVIDER=gemini
+
+# Anthropic (only required if AI_PROVIDER=anthropic)
 ANTHROPIC_API_KEY=sk-ant-...
+
+# Gemini (only required if AI_PROVIDER=gemini)
+GEMINI_API_KEY=AIza...
 
 # CORS
 FRONTEND_URL=http://localhost:4200
@@ -965,9 +1135,20 @@ spring:
 server:
   port: 8080
 
+# AI Provider selection — drives which AIClient bean is loaded
+ai:
+  provider: ${AI_PROVIDER:gemini}
+
+# Anthropic config (only used when ai.provider=anthropic)
 anthropic:
-  api-key: ${ANTHROPIC_API_KEY}
+  api-key: ${ANTHROPIC_API_KEY:not-set}
   model: claude-sonnet-4-20250514
+  max-tokens: 4096
+
+# Gemini config (only used when ai.provider=gemini)
+gemini:
+  api-key: ${GEMINI_API_KEY:not-set}
+  model: gemini-2.5-flash
   max-tokens: 4096
 
 jwt:
@@ -989,6 +1170,7 @@ logging:
 
 The following features are planned for future versions and should be considered when making architectural decisions (e.g., keep the data model extensible):
 
+- **Additional AI Providers**: The `AIClient` interface makes it straightforward to add OpenAI, Mistral, or any other provider without touching existing code.
 - **Batch Notes & Brew Journal**: Detailed logging during and after brewing; photo uploads per session; gravity readings over time.
 - **Water Chemistry Calculator**: Target water profile input; salt addition calculator; integration with recipe steps.
 - **Inventory Management**: Track stock of ingredients; auto-deduct from inventory when a brew session is completed; reorder reminders.
@@ -1001,4 +1183,4 @@ The following features are planned for future versions and should be considered 
 
 ---
 
-*End of BrewMaster Application Specification v1.0.0*
+*End of BrewMaster Application Specification v2.0.0*
