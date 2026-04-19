@@ -37,7 +37,7 @@ public class RecipeService {
                 req.abv(), req.ibu(), req.srm(), req.mashTempC(),
                 req.mashDurationMin(), req.boilDurationMin(),
                 req.fermentationTempC(), req.fermentationDays(),
-                req.notes(), false, user.getId());
+                req.notes(), Boolean.TRUE.equals(req.aiGenerated()), user.getId());
 
         addChildren(recipe, req.ingredients(), req.steps());
         return toResponse(recipeRepository.save(recipe));

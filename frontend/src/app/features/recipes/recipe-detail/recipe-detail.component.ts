@@ -12,6 +12,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { RecipeService } from '../recipe.service';
 import { AuthService } from '../../../core/auth/auth.service';
 import { RecipeDetail, IngredientDto, StepDto } from '../../../core/models/recipe.model';
+import { IngredientPlaceholderPipe } from '../../../shared/pipes/ingredient-placeholder.pipe';
 
 @Component({
   selector: 'app-recipe-detail',
@@ -26,6 +27,7 @@ import { RecipeDetail, IngredientDto, StepDto } from '../../../core/models/recip
     MatChipsModule,
     MatDialogModule,
     MatSnackBarModule,
+    IngredientPlaceholderPipe,
   ],
   template: `
     <mat-toolbar color="primary" class="toolbar">
@@ -164,7 +166,7 @@ import { RecipeDetail, IngredientDto, StepDto } from '../../../core/models/recip
                           <span class="step-duration"><mat-icon>timer</mat-icon>{{ step.durationMin }} min</span>
                         }
                       </div>
-                      <p class="step-instructions">{{ step.instructions }}</p>
+                      <p class="step-instructions">{{ step.instructions | ingredientPlaceholder:recipe()!.ingredients }}</p>
                       @if (step.targetTempC) {
                         <span class="step-temp"><mat-icon>thermostat</mat-icon>{{ step.targetTempC }}°C</span>
                       }

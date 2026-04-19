@@ -23,5 +23,6 @@ public record CreateRecipeRequest(
         @Min(0) Integer fermentationDays,
         String notes,
         @Valid List<IngredientRequest> ingredients,
-        @Valid List<StepRequest> steps
+        @Valid List<StepRequest> steps,
+        Boolean aiGenerated
 ) {}

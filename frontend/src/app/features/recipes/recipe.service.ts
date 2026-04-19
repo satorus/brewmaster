@@ -2,12 +2,14 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from '../../core/api/api.service';
 import {
+  AiRecipeSearchResponse,
   PageResponse,
   RecipeDetail,
   RecipeSummary,
   SaveRecipeRequest,
   ScaleRequest,
   ScaledRecipeResponse,
+  TasteProfileRequest,
 } from '../../core/models/recipe.model';
 
 @Injectable({ providedIn: 'root' })
@@ -39,5 +41,9 @@ export class RecipeService {
 
   scaleRecipe(id: string, req: ScaleRequest): Observable<ScaledRecipeResponse> {
     return this.api.post<ScaledRecipeResponse>(`/recipes/${id}/scale`, req);
+  }
+
+  aiSearchRecipes(req: TasteProfileRequest): Observable<AiRecipeSearchResponse> {
+    return this.api.post<AiRecipeSearchResponse>('/recipes/ai-search', req);
   }
 }

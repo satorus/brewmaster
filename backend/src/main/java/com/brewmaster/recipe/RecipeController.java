@@ -1,5 +1,8 @@
 package com.brewmaster.recipe;
 
+import com.brewmaster.ai.RecipeAiService;
+import com.brewmaster.ai.dto.AiRecipeSearchResponse;
+import com.brewmaster.ai.dto.TasteProfileRequest;
 import com.brewmaster.recipe.dto.*;
 import com.brewmaster.user.User;
 import io.swagger.v3.oas.annotations.Operation;
@@ -21,9 +24,11 @@ import java.util.UUID;
 public class RecipeController {
 
     private final RecipeService recipeService;
+    private final RecipeAiService recipeAiService;
 
-    public RecipeController(RecipeService recipeService) {
+    public RecipeController(RecipeService recipeService, RecipeAiService recipeAiService) {
         this.recipeService = recipeService;
+        this.recipeAiService = recipeAiService;
     }
 
     @GetMapping
@@ -64,6 +69,13 @@ public class RecipeController {
             @AuthenticationPrincipal User user) {
         recipeService.deleteRecipe(id, user);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/ai-search")
+    @Operation(summary = "AI recipe finder — searches the web for recipes matching the taste profile")
+    public ResponseEntity<AiRecipeSearchResponse> aiSearch(
+            @Valid @RequestBody TasteProfileRequest req) {
+        return ResponseEntity.ok(recipeAiService.findRecipes(req));
     }
 
     @PostMapping("/{id}/scale")

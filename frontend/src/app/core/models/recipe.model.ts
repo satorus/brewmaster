@@ -100,7 +100,69 @@ export interface SaveRecipeRequest {
   notes?: string;
   ingredients: IngredientRequest[];
   steps: StepRequest[];
+  aiGenerated?: boolean;
 }
+
+export interface AiIngredientDto {
+  name: string;
+  category: string;
+  amount: number;
+  unit: string;
+  additionTime: string | null;
+  notes: string | null;
+  sortOrder: number;
+}
+
+export interface AiStepDto {
+  stepNumber: number;
+  phase: string;
+  title: string;
+  instructions: string;
+  durationMin: number | null;
+  targetTempC: number | null;
+  timerRequired: boolean;
+  notes: string | null;
+}
+
+export interface AiRecipeDto {
+  name: string;
+  style: string | null;
+  description: string | null;
+  sourceUrl: string | null;
+  baseVolumeL: number;
+  originalGravity: number | null;
+  finalGravity: number | null;
+  abv: number | null;
+  ibu: number | null;
+  srm: number | null;
+  mashTempC: number | null;
+  mashDurationMin: number | null;
+  boilDurationMin: number | null;
+  fermentationTempC: number | null;
+  fermentationDays: number | null;
+  ingredients: AiIngredientDto[];
+  steps: AiStepDto[];
+}
+
+export interface AiRecipeSearchResponse {
+  recipes: AiRecipeDto[];
+}
+
+export interface TasteProfileRequest {
+  style?: string;
+  bitternessLevel?: number;
+  sweetnessLevel?: number;
+  colour?: string;
+  targetAbvMin?: number;
+  targetAbvMax?: number;
+  aromaNotes?: string[];
+  batchVolumeL: number;
+  additionalNotes?: string;
+}
+
+export const BEER_STYLES = ['IPA', 'Stout', 'Weizen', 'Lager', 'Saison', 'Pilsner', 'Porter', 'Wheat Beer', 'Sour', 'Other'] as const;
+export const BEER_COLOURS = ['Pale', 'Amber', 'Red', 'Dark', 'Black'] as const;
+export const AROMA_NOTES = ['Citrus', 'Pine', 'Fruity', 'Malty', 'Roasty', 'Spicy', 'Floral', 'Earthy', 'Tropical', 'Herbal'] as const;
 
 export interface ScaleRequest {
   targetVolumeL: number;

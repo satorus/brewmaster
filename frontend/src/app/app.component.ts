@@ -21,10 +21,10 @@ import { AuthService } from './core/auth/auth.service';
           <mat-icon>menu_book</mat-icon>
           <span>Recipes</span>
         </a>
-        <span class="nav-item disabled" title="Coming in a future update">
-          <mat-icon>search</mat-icon>
+        <a routerLink="/recipe-finder" routerLinkActive="active" class="nav-item">
+          <mat-icon>auto_awesome</mat-icon>
           <span>Finder</span>
-        </span>
+        </a>
         <span class="nav-item disabled" title="Coming in a future update">
           <mat-icon>shopping_cart</mat-icon>
           <span>Order</span>

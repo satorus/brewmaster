@@ -243,6 +243,6 @@ class RecipeControllerTest {
                 BigDecimal.valueOf(6.5), 65, BigDecimal.valueOf(6.0),
                 BigDecimal.valueOf(66.5), 60, 60,
                 BigDecimal.valueOf(19.0), 14, null,
-                ingredients, steps);
+                ingredients, steps, null);
     }
 }

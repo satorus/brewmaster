@@ -19,6 +19,12 @@ export const routes: Routes = [
       import('./features/calendar/calendar.component').then(m => m.CalendarComponent)
   },
   {
+    path: 'recipe-finder',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/recipe-finder/recipe-finder.component').then(m => m.RecipeFinderComponent)
+  },
+  {
     path: 'dashboard',
     canActivate: [authGuard],
     loadComponent: () =>
