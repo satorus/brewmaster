@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/auth/auth.guard';
+import { brewSessionGuard } from './features/brew-mode/brew-session.guard';
 
 export const routes: Routes = [
   {
@@ -53,6 +54,19 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadComponent: () =>
       import('./features/recipes/recipe-detail/recipe-detail.component').then(m => m.RecipeDetailComponent)
+  },
+  {
+    path: 'brew-mode/setup',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/brew-mode/setup/brew-mode-setup.component').then(m => m.BrewModeSetupComponent)
+  },
+  {
+    path: 'brew-mode/session/:id',
+    canActivate: [authGuard],
+    canDeactivate: [brewSessionGuard],
+    loadComponent: () =>
+      import('./features/brew-mode/session/brew-mode-session.component').then(m => m.BrewModeSessionComponent)
   },
   {
     path: '',

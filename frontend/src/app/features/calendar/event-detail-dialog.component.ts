@@ -8,6 +8,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { DatePipe } from '@angular/common';
 import { BrewEventResponse } from '../../core/models/event.model';
 import { EventService } from './event.service';
+import { Router } from '@angular/router';
 
 export interface EventDetailData {
   event: BrewEventResponse;
@@ -71,6 +72,11 @@ export interface EventDetailData {
     </mat-dialog-content>
 
     <mat-dialog-actions align="end">
+      @if (event().recipeId) {
+        <button mat-button color="accent" (click)="startBrew()">
+          <mat-icon>science</mat-icon> Start Brew
+        </button>
+      }
       @if (isCreator()) {
         <button mat-button color="warn" (click)="onDelete()" [disabled]="isSubmitting()">
           Delete
@@ -111,6 +117,7 @@ export class EventDetailDialogComponent {
   readonly dialogRef = inject(MatDialogRef<EventDetailDialogComponent>);
   private readonly data: EventDetailData = inject(MAT_DIALOG_DATA);
   private readonly eventService = inject(EventService);
+  private readonly router = inject(Router);
 
   event = signal<BrewEventResponse>(this.data.event);
   isSubmitting = signal(false);
@@ -129,6 +136,13 @@ export class EventDetailDialogComponent {
         this.isSubmitting.set(false);
       },
       error: () => this.isSubmitting.set(false),
+    });
+  }
+
+  startBrew(): void {
+    this.dialogRef.close();
+    this.router.navigate(['/brew-mode/setup'], {
+      queryParams: { recipeId: this.event().recipeId },
     });
   }
 

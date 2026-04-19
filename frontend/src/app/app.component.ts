@@ -25,6 +25,10 @@ import { AuthService } from './core/auth/auth.service';
           <mat-icon>auto_awesome</mat-icon>
           <span>Finder</span>
         </a>
+        <a routerLink="/brew-mode/setup" routerLinkActive="active" class="nav-item">
+          <mat-icon>science</mat-icon>
+          <span>Brew</span>
+        </a>
         <span class="nav-item disabled" title="Coming in a future update">
           <mat-icon>shopping_cart</mat-icon>
           <span>Order</span>
