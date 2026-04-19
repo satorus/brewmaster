@@ -6,7 +6,11 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { BrewEventResponse, CreateEventRequest, UpdateEventRequest } from '../../core/models/event.model';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatIconModule } from '@angular/material/icon';
+import { debounceTime, filter, switchMap } from 'rxjs';
+import { BrewEventResponse, CreateEventRequest, UpdateEventRequest, UserSearchDto } from '../../core/models/event.model';
 import { EventService } from './event.service';
 
 @Component({
@@ -20,6 +24,9 @@ import { EventService } from './event.service';
     MatButtonModule,
     MatDatepickerModule,
     MatProgressSpinnerModule,
+    MatChipsModule,
+    MatAutocompleteModule,
+    MatIconModule,
   ],
   template: `
     <h2 mat-dialog-title>{{ data?.id ? 'Edit Event' : 'New Brew Event' }}</h2>
@@ -60,6 +67,32 @@ import { EventService } from './event.service';
           <textarea matInput formControlName="description" rows="3" placeholder="Optional notes..."></textarea>
         </mat-form-field>
 
+        @if (!data?.id) {
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Invite Users</mat-label>
+            <mat-chip-grid #chipGrid>
+              @for (user of invitedUsers(); track user.id) {
+                <mat-chip-row (removed)="removeUser(user)">
+                  {{ user.displayName ?? user.username }}
+                  <button matChipRemove aria-label="Remove"><mat-icon>cancel</mat-icon></button>
+                </mat-chip-row>
+              }
+            </mat-chip-grid>
+            <input placeholder="Search by username…"
+                   [matChipInputFor]="chipGrid"
+                   [matAutocomplete]="userAuto"
+                   [formControl]="userSearchControl">
+            <mat-autocomplete #userAuto (optionSelected)="addUser($event.option.value)">
+              @for (u of userResults(); track u.id) {
+                <mat-option [value]="u">
+                  {{ u.displayName ?? u.username }}
+                  <span class="username-hint">&#64;{{ u.username }}</span>
+                </mat-option>
+              }
+            </mat-autocomplete>
+          </mat-form-field>
+        }
+
       </form>
     </mat-dialog-content>
 
@@ -80,6 +113,7 @@ import { EventService } from './event.service';
     .event-form { display: flex; flex-direction: column; gap: 4px; padding-top: 8px; }
     .full-width { width: 100%; }
     mat-dialog-content { min-width: min(480px, 90vw); }
+    .username-hint { margin-left: 6px; font-size: 12px; color: rgba(255,255,255,.5); }
   `]
 })
 export class CreateEventDialogComponent {
@@ -88,6 +122,9 @@ export class CreateEventDialogComponent {
   private readonly eventService = inject(EventService);
 
   isSubmitting = signal(false);
+  invitedUsers = signal<UserSearchDto[]>([]);
+  userResults = signal<UserSearchDto[]>([]);
+  userSearchControl = new FormControl('');
 
   form = new FormGroup({
     title: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(200)] }),
@@ -107,6 +144,27 @@ export class CreateEventDialogComponent {
         description: this.data.description ?? '',
       });
     }
+
+    this.userSearchControl.valueChanges.pipe(
+      debounceTime(300),
+      filter(q => typeof q === 'string' && q.trim().length >= 1),
+      switchMap(q => this.eventService.searchUsers(q as string))
+    ).subscribe(results => {
+      const invitedIds = new Set(this.invitedUsers().map(u => u.id));
+      this.userResults.set(results.filter(u => !invitedIds.has(u.id)));
+    });
+  }
+
+  addUser(user: UserSearchDto): void {
+    if (!this.invitedUsers().some(u => u.id === user.id)) {
+      this.invitedUsers.update(list => [...list, user]);
+    }
+    this.userSearchControl.setValue('');
+    this.userResults.set([]);
+  }
+
+  removeUser(user: UserSearchDto): void {
+    this.invitedUsers.update(list => list.filter(u => u.id !== user.id));
   }
 
   submit(): void {
@@ -114,7 +172,7 @@ export class CreateEventDialogComponent {
 
     const v = this.form.getRawValue();
     const brewDate = v.brewDate instanceof Date
-      ? v.brewDate.toLocaleDateString('en-CA')  // yields YYYY-MM-DD
+      ? v.brewDate.toLocaleDateString('en-CA')
       : '';
 
     this.isSubmitting.set(true);
@@ -138,6 +196,7 @@ export class CreateEventDialogComponent {
         description: v.description || undefined,
         startTime: v.startTime || undefined,
         location: v.location || undefined,
+        invitedUserIds: this.invitedUsers().map(u => u.id),
       };
       this.eventService.createEvent(req).subscribe({
         next: event => { this.isSubmitting.set(false); this.dialogRef.close(event); },

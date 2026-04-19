@@ -5,6 +5,7 @@ import {
   BrewEventResponse,
   CreateEventRequest,
   UpdateEventRequest,
+  UserSearchDto,
 } from '../../core/models/event.model';
 
 @Injectable({ providedIn: 'root' })
@@ -33,5 +34,9 @@ export class EventService {
 
   rsvp(id: string, status: 'ACCEPTED' | 'DECLINED'): Observable<BrewEventResponse> {
     return this.api.post<BrewEventResponse>(`/events/${id}/rsvp`, { status });
+  }
+
+  searchUsers(q: string): Observable<UserSearchDto[]> {
+    return this.api.get<UserSearchDto[]>('/users/search', { q });
   }
 }

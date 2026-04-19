@@ -5,6 +5,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -37,5 +38,12 @@ public class UserService implements UserDetailsService {
 
     public User save(User user) {
         return userRepository.save(user);
+    }
+
+    public List<UserSearchDto> searchUsers(String q) {
+        return userRepository.findTop10ByUsernameContainingIgnoreCase(q)
+                .stream()
+                .map(u -> new UserSearchDto(u.getId(), u.getUsername(), u.getDisplayName()))
+                .toList();
     }
 }

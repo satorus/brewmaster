@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-// TODO: implement in Recipe feature milestone
 @Entity
 @Table(name = "recipe_steps")
 public class RecipeStep {
@@ -43,9 +42,27 @@ public class RecipeStep {
 
     protected RecipeStep() {}
 
+    public RecipeStep(Recipe recipe, int stepNumber, String phase, String title,
+                      String instructions, Integer durationMin, BigDecimal targetTempC,
+                      boolean timerRequired, String notes) {
+        this.recipe = recipe;
+        this.stepNumber = stepNumber;
+        this.phase = phase;
+        this.title = title;
+        this.instructions = instructions;
+        this.durationMin = durationMin;
+        this.targetTempC = targetTempC;
+        this.timerRequired = timerRequired;
+        this.notes = notes;
+    }
+
     public UUID getId() { return id; }
     public int getStepNumber() { return stepNumber; }
     public String getPhase() { return phase; }
     public String getTitle() { return title; }
     public String getInstructions() { return instructions; }
+    public Integer getDurationMin() { return durationMin; }
+    public BigDecimal getTargetTempC() { return targetTempC; }
+    public boolean isTimerRequired() { return timerRequired; }
+    public String getNotes() { return notes; }
 }

@@ -143,7 +143,7 @@ interface CalendarDay {
     </button>
   `,
   styles: [`
-    :host { display: block; height: 100vh; background: #1A1A1A; overflow: auto; }
+    :host { display: block; min-height: 100%; background: #1A1A1A; }
 
     .toolbar { position: sticky; top: 0; z-index: 10; }
     .app-title { font-size: 18px; font-weight: 600; }

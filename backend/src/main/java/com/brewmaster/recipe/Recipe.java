@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-// TODO: implement in Recipe feature milestone
 @Entity
 @Table(name = "recipes")
 public class Recipe {
@@ -29,7 +28,7 @@ public class Recipe {
     private String sourceUrl;
 
     @Column(name = "base_volume_l", nullable = false, precision = 6, scale = 2)
-    private BigDecimal baseVolumeL = BigDecimal.valueOf(20);
+    private BigDecimal baseVolumeL;
 
     @Column(name = "original_gravity", precision = 5, scale = 4)
     private BigDecimal originalGravity;
@@ -64,7 +63,7 @@ public class Recipe {
     private String notes;
 
     @Column(name = "is_ai_generated", nullable = false)
-    private boolean isAiGenerated = false;
+    private boolean aiGenerated = false;
 
     @Column(name = "created_by")
     private UUID createdBy;
@@ -85,8 +84,78 @@ public class Recipe {
 
     protected Recipe() {}
 
+    public Recipe(String name, String style, String description, String sourceUrl,
+                  BigDecimal baseVolumeL, BigDecimal originalGravity, BigDecimal finalGravity,
+                  BigDecimal abv, Integer ibu, BigDecimal srm, BigDecimal mashTempC,
+                  Integer mashDurationMin, Integer boilDurationMin, BigDecimal fermentationTempC,
+                  Integer fermentationDays, String notes, boolean aiGenerated, UUID createdBy) {
+        this.name = name;
+        this.style = style;
+        this.description = description;
+        this.sourceUrl = sourceUrl;
+        this.baseVolumeL = baseVolumeL;
+        this.originalGravity = originalGravity;
+        this.finalGravity = finalGravity;
+        this.abv = abv;
+        this.ibu = ibu;
+        this.srm = srm;
+        this.mashTempC = mashTempC;
+        this.mashDurationMin = mashDurationMin;
+        this.boilDurationMin = boilDurationMin;
+        this.fermentationTempC = fermentationTempC;
+        this.fermentationDays = fermentationDays;
+        this.notes = notes;
+        this.aiGenerated = aiGenerated;
+        this.createdBy = createdBy;
+    }
+
+    @PreUpdate
+    void onUpdate() { this.updatedAt = Instant.now(); }
+
+    public void update(String name, String style, String description, String sourceUrl,
+                       BigDecimal baseVolumeL, BigDecimal originalGravity, BigDecimal finalGravity,
+                       BigDecimal abv, Integer ibu, BigDecimal srm, BigDecimal mashTempC,
+                       Integer mashDurationMin, Integer boilDurationMin,
+                       BigDecimal fermentationTempC, Integer fermentationDays, String notes) {
+        this.name = name;
+        this.style = style;
+        this.description = description;
+        this.sourceUrl = sourceUrl;
+        this.baseVolumeL = baseVolumeL;
+        this.originalGravity = originalGravity;
+        this.finalGravity = finalGravity;
+        this.abv = abv;
+        this.ibu = ibu;
+        this.srm = srm;
+        this.mashTempC = mashTempC;
+        this.mashDurationMin = mashDurationMin;
+        this.boilDurationMin = boilDurationMin;
+        this.fermentationTempC = fermentationTempC;
+        this.fermentationDays = fermentationDays;
+        this.notes = notes;
+    }
+
     public UUID getId() { return id; }
     public String getName() { return name; }
+    public String getStyle() { return style; }
+    public String getDescription() { return description; }
+    public String getSourceUrl() { return sourceUrl; }
+    public BigDecimal getBaseVolumeL() { return baseVolumeL; }
+    public BigDecimal getOriginalGravity() { return originalGravity; }
+    public BigDecimal getFinalGravity() { return finalGravity; }
+    public BigDecimal getAbv() { return abv; }
+    public Integer getIbu() { return ibu; }
+    public BigDecimal getSrm() { return srm; }
+    public BigDecimal getMashTempC() { return mashTempC; }
+    public Integer getMashDurationMin() { return mashDurationMin; }
+    public Integer getBoilDurationMin() { return boilDurationMin; }
+    public BigDecimal getFermentationTempC() { return fermentationTempC; }
+    public Integer getFermentationDays() { return fermentationDays; }
+    public String getNotes() { return notes; }
+    public boolean isAiGenerated() { return aiGenerated; }
+    public UUID getCreatedBy() { return createdBy; }
+    public Instant getCreatedAt() { return createdAt; }
+    public Instant getUpdatedAt() { return updatedAt; }
     public List<RecipeIngredient> getIngredients() { return ingredients; }
     public List<RecipeStep> getSteps() { return steps; }
 }

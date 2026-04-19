@@ -22,8 +22,13 @@ public class UserController {
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<User>> listUsers() {
-        // TODO: return page of users (ADMIN only)
         return ResponseEntity.ok(List.of());
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<UserSearchDto>> searchUsers(
+            @RequestParam(defaultValue = "") String q) {
+        return ResponseEntity.ok(userService.searchUsers(q));
     }
 
     @GetMapping("/{id}")

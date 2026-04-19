@@ -25,6 +25,30 @@ export const routes: Routes = [
       import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent)
   },
   {
+    path: 'recipes',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/recipes/recipes.component').then(m => m.RecipesComponent)
+  },
+  {
+    path: 'recipes/new',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/recipes/recipe-form/recipe-form.component').then(m => m.RecipeFormComponent)
+  },
+  {
+    path: 'recipes/:id/edit',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/recipes/recipe-form/recipe-form.component').then(m => m.RecipeFormComponent)
+  },
+  {
+    path: 'recipes/:id',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/recipes/recipe-detail/recipe-detail.component').then(m => m.RecipeDetailComponent)
+  },
+  {
     path: '',
     redirectTo: 'calendar',
     pathMatch: 'full'
