@@ -14,19 +14,35 @@ public class RecipeAiService {
 
     private static final Logger log = LoggerFactory.getLogger(RecipeAiService.class);
 
-    private final AnthropicClient anthropicClient;
+    private final AIClient aiClient;
     private final ObjectMapper objectMapper;
 
-    public RecipeAiService(AnthropicClient anthropicClient, ObjectMapper objectMapper) {
-        this.anthropicClient = anthropicClient;
+    public RecipeAiService(AIClient aiClient, ObjectMapper objectMapper) {
+        this.aiClient = aiClient;
         this.objectMapper = objectMapper;
     }
 
     public AiRecipeSearchResponse findRecipes(TasteProfileRequest profile) {
         log.debug("AI recipe search: style={}, volume={}L", profile.style(), profile.batchVolumeL());
 
-        String rawResponse = anthropicClient.sendMessage(buildSystemPrompt(), buildUserMessage(profile));
-        String json = anthropicClient.extractJson(rawResponse);
+        AIRequest request = new AIRequest(buildSystemPrompt(), buildUserMessage(profile), 16000);
+        String rawResponse;
+        try {
+            rawResponse = aiClient.sendWithWebSearch(request);
+        } catch (AIClientException e) {
+            log.error("AI client error during recipe search: {}", e.getMessage());
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "AI service temporarily unavailable. Please try again.");
+        }
+
+        String json;
+        try {
+            json = AIJsonUtil.extractJson(rawResponse, objectMapper);
+        } catch (AIClientException e) {
+            log.error("Failed to extract JSON from AI response: {}", e.getMessage());
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "AI returned an unexpected response format. Please try again.");
+        }
 
         try {
             AiRecipeSearchResponse result = objectMapper.readValue(json, AiRecipeSearchResponse.class);

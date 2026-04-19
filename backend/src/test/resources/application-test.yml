@@ -18,9 +18,17 @@ jwt:
   secret: test-secret-key-that-is-at-least-256-bits-long-for-hmac-sha256
   expiration-ms: 3600000
 
+ai:
+  provider: anthropic
+
 anthropic:
   api-key: test-key
   model: claude-sonnet-4-20250514
+  max-tokens: 100
+
+gemini:
+  api-key: test-gemini-key
+  model: gemini-2.0-flash
   max-tokens: 100
 
 frontend:

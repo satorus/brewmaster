@@ -6,9 +6,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class OrderAiService {
 
-    private final AnthropicClient anthropicClient;
+    private final AIClient aiClient;
 
-    public OrderAiService(AnthropicClient anthropicClient) {
-        this.anthropicClient = anthropicClient;
+    public OrderAiService(AIClient aiClient) {
+        this.aiClient = aiClient;
     }
 }

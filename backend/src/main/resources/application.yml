@@ -21,10 +21,18 @@ spring:
 server:
   port: 8080
 
+ai:
+  provider: gemini   # switch to "gemini" to use Gemini
+
 anthropic:
   api-key: ${ANTHROPIC_API_KEY}
   model: claude-sonnet-4-20250514
   max-tokens: 4096
+
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  model: gemini-2.5-flash
+  max-tokens: 16000
 
 jwt:
   secret: ${JWT_SECRET}
