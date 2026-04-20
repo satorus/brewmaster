@@ -112,14 +112,47 @@ import { RecipeSummary } from '../../../core/models/recipe.model';
   `,
   styles: [`
     .setup-container { padding: 16px; max-width: 600px; margin: 0 auto; }
-    .setup-card, .preview-card { margin-bottom: 16px; }
     .full-width { width: 100%; }
     .row { display: flex; gap: 12px; flex-wrap: wrap; }
     .row mat-form-field { flex: 1; min-width: 120px; }
-    .preview-grid { display: grid; grid-template-columns: 1fr auto; gap: 8px 16px; }
     .start-btn { width: 100%; height: 48px; font-size: 16px; }
     .center { display: flex; justify-content: center; padding: 40px; }
     mat-spinner { display: inline-block; }
+
+    /* Dark card surfaces */
+    :host ::ng-deep .mat-mdc-card {
+      background: #2a2a2a !important;
+      color: rgba(255,255,255,.87) !important;
+      margin-bottom: 16px;
+    }
+    :host ::ng-deep .mat-mdc-card-title { color: rgba(255,255,255,.87) !important; }
+
+    /* Preview grid text */
+    .preview-grid { display: grid; grid-template-columns: 1fr auto; gap: 8px 16px; }
+    .preview-grid span { color: rgba(255,255,255,.6); }
+    .preview-grid strong { color: rgba(255,255,255,.9); }
+
+    /* Form field dark overrides */
+    :host ::ng-deep .mdc-text-field--outlined .mdc-notched-outline__leading,
+    :host ::ng-deep .mdc-text-field--outlined .mdc-notched-outline__notch,
+    :host ::ng-deep .mdc-text-field--outlined .mdc-notched-outline__trailing {
+      border-color: rgba(255,255,255,.3) !important;
+    }
+    :host ::ng-deep .mdc-text-field--outlined:not(.mdc-text-field--disabled) .mdc-text-field__input {
+      color: rgba(255,255,255,.9) !important;
+      caret-color: white;
+    }
+    :host ::ng-deep .mat-mdc-form-field .mdc-floating-label,
+    :host ::ng-deep .mat-mdc-form-field .mat-mdc-floating-label { color: rgba(255,255,255,.6) !important; }
+    :host ::ng-deep .mdc-text-field--outlined:not(.mdc-text-field--disabled) { background: rgba(255,255,255,.05) !important; }
+    :host ::ng-deep .mat-mdc-option { background: #2a2a2a; color: rgba(255,255,255,.87); }
+    :host ::ng-deep .mat-mdc-option:hover { background: #3a3a3a !important; }
+
+    /* Disabled button on dark background */
+    :host ::ng-deep .mat-mdc-raised-button:disabled {
+      background: rgba(255,255,255,.12) !important;
+      color: rgba(255,255,255,.38) !important;
+    }
   `]
 })
 export class BrewModeSetupComponent implements OnInit {

@@ -1,6 +1,8 @@
 package com.brewmaster.brew;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -42,10 +44,12 @@ public class BrewSession {
     @Column(name = "completed_at")
     private Instant completedAt;
 
-    @Column(name = "scaled_ingredients_json", columnDefinition = "TEXT")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "scaled_ingredients_json", columnDefinition = "jsonb")
     private String scaledIngredientsJson;
 
-    @Column(name = "scaled_steps_json", columnDefinition = "TEXT")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "scaled_steps_json", columnDefinition = "jsonb")
     private String scaledStepsJson;
 
     @Column(name = "boil_off_rate_percent", nullable = false, precision = 5, scale = 2)

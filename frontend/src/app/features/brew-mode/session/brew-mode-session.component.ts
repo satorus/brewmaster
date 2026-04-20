@@ -46,6 +46,24 @@ import { HasCanDeactivate } from '../brew-session.guard';
           <mat-icon>error_outline</mat-icon>
           <p>{{ error() }}</p>
         </div>
+      } @else if (completing()) {
+        <!-- Pre-completion form -->
+        <div class="complete-screen">
+          <mat-icon style="font-size:48px;width:48px;height:48px;color:#ffa726">sports_bar</mat-icon>
+          <h2>Finish Your Brew</h2>
+          <p class="complete-sub">All {{ totalSteps() }} steps done &bull; {{ session()!.scaledSteps.length }} total</p>
+          <mat-form-field appearance="outline" style="width:100%;max-width:360px">
+            <mat-label>Final notes (optional)</mat-label>
+            <textarea matInput [(ngModel)]="finalNotes" rows="4"></textarea>
+          </mat-form-field>
+          <div style="display:flex;gap:12px;margin-top:8px">
+            <button mat-stroked-button (click)="completing.set(false)">Cancel</button>
+            <button mat-raised-button color="accent" (click)="confirmFinish()" [disabled]="advancing()">
+              @if (advancing()) { <mat-spinner diameter="20"></mat-spinner> }
+              @else { Mark as Complete <mat-icon>check</mat-icon> }
+            </button>
+          </div>
+        </div>
       } @else if (session()?.status !== 'IN_PROGRESS' && session()?.status !== undefined) {
         <!-- Completion / Abandoned screen -->
         <div class="complete-screen">
@@ -92,17 +110,24 @@ import { HasCanDeactivate } from '../brew-session.guard';
               </mat-chip>
             }
 
-            @if (currentStep()!.timerRequired && currentStep()!.durationMin) {
-              <div class="timer-section">
-                <div class="timer-display" [class.running]="timer.running()" (click)="toggleTimer()">
-                  {{ timer.formatTime(timer.running() || timer.remainingSeconds() > 0
-                      ? timer.remainingSeconds()
-                      : currentStep()!.durationMin! * 60) }}
+            @if (currentStep()!.durationMin) {
+              @if (currentStep()!.timerRequired && currentStep()!.durationMin! <= 480) {
+                <div class="timer-section">
+                  <div class="timer-display" [class.running]="timer.running()" (click)="toggleTimer()">
+                    {{ timer.formatTime(timer.running() || timer.remainingSeconds() > 0
+                        ? timer.remainingSeconds()
+                        : currentStep()!.durationMin! * 60) }}
+                  </div>
+                  <div class="timer-hint">
+                    {{ timer.running() ? 'Tap to pause' : (timer.remainingSeconds() > 0 ? 'Tap to resume' : 'Tap to start') }}
+                  </div>
                 </div>
-                <div class="timer-hint">
-                  {{ timer.running() ? 'Tap to pause' : (timer.remainingSeconds() > 0 ? 'Tap to resume' : 'Tap to start') }}
+              } @else {
+                <div class="duration-label">
+                  <mat-icon>schedule</mat-icon>
+                  {{ formatDuration(currentStep()!.durationMin!) }}
                 </div>
-              </div>
+              }
             }
 
             <mat-form-field appearance="outline" class="notes-field">
@@ -131,9 +156,8 @@ import { HasCanDeactivate } from '../brew-session.guard';
                 @else { Complete Step <mat-icon>chevron_right</mat-icon> }
               </button>
             } @else {
-              <button mat-raised-button color="accent" (click)="finishSession()" [disabled]="advancing()">
-                @if (advancing()) { <mat-spinner diameter="20"></mat-spinner> }
-                @else { Finish Brew <mat-icon>check</mat-icon> }
+              <button mat-raised-button color="accent" (click)="completing.set(true)" [disabled]="advancing()">
+                Finish Brew <mat-icon>check</mat-icon>
               </button>
             }
           </div>
@@ -142,7 +166,8 @@ import { HasCanDeactivate } from '../brew-session.guard';
     </div>
   `,
   styles: [`
-    .session-root { display: flex; flex-direction: column; height: 100vh; background: #1a1a1a; }
+    :host { display: flex; flex-direction: column; height: 100%; }
+    .session-root { display: flex; flex-direction: column; flex: 1; min-height: 0; background: #1a1a1a; overflow: hidden; }
     .session-toolbar { transition: background .4s; }
     .toolbar-title { flex: 1; margin-left: 8px; }
     .spacer { flex: 1; }
@@ -150,12 +175,12 @@ import { HasCanDeactivate } from '../brew-session.guard';
     .center { display: flex; justify-content: center; align-items: center; flex: 1; }
     .error-state { flex-direction: column; color: #f44336; gap: 8px; }
 
-    .step-scroll { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+    .step-scroll { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
     .phase-badge {
       padding: 6px 16px; font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
-      text-transform: uppercase; color: white; text-align: center;
+      text-transform: uppercase; color: white; text-align: center; flex-shrink: 0;
     }
-    .step-content { padding: 20px 16px; flex: 1; }
+    .step-content { padding: 20px 16px; flex: 1; min-height: 0; overflow-y: auto; }
     .step-number { font-size: 12px; color: rgba(255,255,255,.5); margin-bottom: 8px; }
     .step-title { font-size: 22px; font-weight: 600; color: white; margin: 0 0 16px; }
     .step-instructions { font-size: 15px; color: rgba(255,255,255,.85); line-height: 1.6; margin-bottom: 16px; white-space: pre-wrap; }
@@ -171,15 +196,38 @@ import { HasCanDeactivate } from '../brew-session.guard';
     .timer-display:hover { background: rgba(255,255,255,.08); }
     .timer-display.running { color: #81c784; }
     .timer-hint { font-size: 12px; color: rgba(255,255,255,.4); }
+    .duration-label {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      color: rgba(255,255,255,.7); font-size: 18px; margin: 16px 0;
+    }
+    .duration-label mat-icon { color: rgba(255,255,255,.5); }
 
     .notes-field, .temp-field { width: 100%; margin-top: 8px; }
-    .notes-field textarea, .temp-field input { color: white; }
+
+    /* Dark-surface overrides for Material MDC form fields */
+    :host ::ng-deep .mdc-text-field--outlined .mdc-notched-outline__leading,
+    :host ::ng-deep .mdc-text-field--outlined .mdc-notched-outline__notch,
+    :host ::ng-deep .mdc-text-field--outlined .mdc-notched-outline__trailing {
+      border-color: rgba(255,255,255,.3) !important;
+    }
+    :host ::ng-deep .mdc-text-field--outlined:not(.mdc-text-field--disabled) .mdc-text-field__input {
+      color: rgba(255,255,255,.9) !important;
+      caret-color: white;
+    }
+    :host ::ng-deep .mat-mdc-form-field .mdc-floating-label,
+    :host ::ng-deep .mat-mdc-form-field .mat-mdc-floating-label {
+      color: rgba(255,255,255,.6) !important;
+    }
+    :host ::ng-deep .mdc-text-field--outlined:not(.mdc-text-field--disabled) {
+      background: rgba(255,255,255,.05) !important;
+    }
 
     .step-actions {
-      display: flex; align-items: center; padding: 12px 16px;
-      border-top: 1px solid rgba(255,255,255,.1); gap: 8px;
+      display: flex; align-items: center; padding: 12px 16px; flex-shrink: 0;
+      border-top: 1px solid rgba(255,255,255,.1); gap: 8px; background: #1a1a1a;
     }
     .step-actions button { height: 44px; }
+    .step-actions button mat-icon { vertical-align: middle; }
 
     .phase-overlay {
       position: fixed; inset: 0; z-index: 100;
@@ -196,7 +244,7 @@ import { HasCanDeactivate } from '../brew-session.guard';
     .complete-screen {
       flex: 1; display: flex; flex-direction: column;
       align-items: center; justify-content: center; padding: 32px;
-      gap: 16px; text-align: center;
+      gap: 16px; text-align: center; background: #1a1a1a; color: rgba(255,255,255,.9);
     }
     .complete-icon { font-size: 64px; width: 64px; height: 64px; color: #81c784; }
     .complete-screen h2 { font-size: 28px; color: white; margin: 0; }
@@ -218,12 +266,14 @@ export class BrewModeSessionComponent implements OnInit, OnDestroy, HasCanDeacti
 
   readonly loading = signal(true);
   readonly advancing = signal(false);
+  readonly completing = signal(false);
   readonly error = signal<string | null>(null);
   readonly session = signal<BrewSessionResponse | null>(null);
   readonly viewStep = signal(0);
   readonly showPhaseTransition = signal(false);
 
   stepNotes = '';
+  finalNotes = '';
   actualTemp: number | null = null;
 
   readonly totalSteps = computed(() => this.session()?.scaledSteps.length ?? 0);
@@ -301,13 +351,15 @@ export class BrewModeSessionComponent implements OnInit, OnDestroy, HasCanDeacti
     });
   }
 
-  finishSession(): void {
+  confirmFinish(): void {
     const s = this.session();
     if (!s) return;
     this.advancing.set(true);
-    this.sessionService.completeSession(s.id, this.stepNotes || undefined).subscribe({
+    this.sessionService.completeSession(s.id, this.finalNotes || undefined).subscribe({
       next: updated => {
         this.session.set(updated);
+        this.completing.set(false);
+        this.finalNotes = '';
         this.timer.stop();
         this.advancing.set(false);
       },
@@ -325,6 +377,20 @@ export class BrewModeSessionComponent implements OnInit, OnDestroy, HasCanDeacti
     }
   }
 
+  formatDuration(minutes: number): string {
+    if (minutes >= 1440) {
+      const d = Math.floor(minutes / 1440);
+      const h = Math.floor((minutes % 1440) / 60);
+      return h > 0 ? `${d}d ${h}h` : `${d} day${d !== 1 ? 's' : ''}`;
+    }
+    if (minutes >= 60) {
+      const h = Math.floor(minutes / 60);
+      const m = minutes % 60;
+      return m > 0 ? `${h}h ${m}m` : `${h}h`;
+    }
+    return `${minutes}m`;
+  }
+
   toggleTimer(): void {
     const step = this.currentStep();
     if (!step?.durationMin) return;
@@ -338,7 +404,9 @@ export class BrewModeSessionComponent implements OnInit, OnDestroy, HasCanDeacti
   }
 
   navigateAway(): void {
-    if (this.canDeactivate() || confirm('Leave brew session? Your progress is saved and you can return.')) {
+    if (this.canDeactivate() || this.completing() ||
+        confirm('Leave brew session? Your progress is saved and you can return.')) {
+      this.completing.set(false);
       this.router.navigate(['/recipes']);
     }
   }

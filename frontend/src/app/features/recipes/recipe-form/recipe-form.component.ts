@@ -381,7 +381,10 @@ export class RecipeFormComponent implements OnInit {
   }
 
   addStep(): void {
-    this.stepsArray.push(this.buildStepRow());
+    const lastPhase = this.stepsArray.length > 0
+      ? this.stepsArray.at(this.stepsArray.length - 1).get('phase')?.value
+      : undefined;
+    this.stepsArray.push(this.buildStepRow(lastPhase ? { phase: lastPhase, title: '', instructions: '' } : undefined));
   }
 
   removeStep(index: number): void {

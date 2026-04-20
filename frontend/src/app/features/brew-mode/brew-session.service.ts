@@ -1,30 +1,29 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { ApiService } from '../../core/api/api.service';
 import { AdvanceStepRequest, BrewSessionResponse, StartSessionRequest } from '../../core/models/brew-session.model';
 
 @Injectable({ providedIn: 'root' })
 export class BrewSessionService {
-  private readonly http = inject(HttpClient);
-  private readonly base = '/api/v1/sessions';
+  private readonly api = inject(ApiService);
 
   startSession(req: StartSessionRequest): Observable<BrewSessionResponse> {
-    return this.http.post<BrewSessionResponse>(this.base, req);
+    return this.api.post<BrewSessionResponse>('/sessions', req);
   }
 
   getSession(id: string): Observable<BrewSessionResponse> {
-    return this.http.get<BrewSessionResponse>(`${this.base}/${id}`);
+    return this.api.get<BrewSessionResponse>(`/sessions/${id}`);
   }
 
   advanceStep(id: string, req: AdvanceStepRequest): Observable<BrewSessionResponse> {
-    return this.http.put<BrewSessionResponse>(`${this.base}/${id}/step`, req);
+    return this.api.put<BrewSessionResponse>(`/sessions/${id}/step`, req);
   }
 
   completeSession(id: string, notes?: string): Observable<BrewSessionResponse> {
-    return this.http.put<BrewSessionResponse>(`${this.base}/${id}/complete`, { notes });
+    return this.api.put<BrewSessionResponse>(`/sessions/${id}/complete`, { notes });
   }
 
   abandonSession(id: string): Observable<void> {
-    return this.http.delete<void>(`${this.base}/${id}`);
+    return this.api.delete<void>(`/sessions/${id}`);
   }
 }

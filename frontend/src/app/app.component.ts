@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from './core/auth/auth.service';
 
@@ -11,7 +12,7 @@ import { AuthService } from './core/auth/auth.service';
     <div class="content">
       <router-outlet />
     </div>
-    @if (auth.isAuthenticated()) {
+    @if (auth.isAuthenticated() && !isBrewSession()) {
       <nav class="bottom-nav" aria-label="Main navigation">
         <a routerLink="/calendar" routerLinkActive="active" class="nav-item">
           <mat-icon>calendar_month</mat-icon>
@@ -29,10 +30,10 @@ import { AuthService } from './core/auth/auth.service';
           <mat-icon>science</mat-icon>
           <span>Brew</span>
         </a>
-        <span class="nav-item disabled" title="Coming in a future update">
+        <a routerLink="/order/new" class="nav-item" [class.active]="isOrderRoute()">
           <mat-icon>shopping_cart</mat-icon>
           <span>Order</span>
-        </span>
+        </a>
       </nav>
     }
   `,
@@ -70,4 +71,13 @@ import { AuthService } from './core/auth/auth.service';
 })
 export class AppComponent {
   readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+
+  isBrewSession(): boolean {
+    return this.router.url.startsWith('/brew-mode/session');
+  }
+
+  isOrderRoute(): boolean {
+    return this.router.url.startsWith('/order');
+  }
 }

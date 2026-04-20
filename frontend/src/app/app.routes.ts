@@ -56,6 +56,18 @@ export const routes: Routes = [
       import('./features/recipes/recipe-detail/recipe-detail.component').then(m => m.RecipeDetailComponent)
   },
   {
+    path: 'order/new',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/order/order-new.component').then(m => m.OrderNewComponent)
+  },
+  {
+    path: 'order/history',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/order/order-history.component').then(m => m.OrderHistoryComponent)
+  },
+  {
     path: 'brew-mode/setup',
     canActivate: [authGuard],
     loadComponent: () =>
