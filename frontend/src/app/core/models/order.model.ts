@@ -1,8 +1,8 @@
 export interface BestOfferDto {
   shopName: string;
+  shopDomain: string;
   price: number;
   pricePerUnit: string;
-  productUrl: string;
   packageSize: string;
   packagesNeeded: number;
   totalCost: number;
@@ -10,8 +10,12 @@ export interface BestOfferDto {
 
 export interface AlternativeOfferDto {
   shopName: string;
+  shopDomain: string;
   price: number;
-  productUrl: string;
+}
+
+export function shopSearchUrl(shopDomain: string, ingredient: string): string {
+  return `https://www.google.com/search?q=site:${shopDomain}+${encodeURIComponent(ingredient)}`;
 }
 
 export interface OrderItemDto {

@@ -12,12 +12,11 @@ import { MatCardModule } from '@angular/material/card';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatChipsModule } from '@angular/material/chips';
-import { DecimalPipe, CurrencyPipe, AsyncPipe } from '@angular/common';
-import { map, startWith } from 'rxjs/operators';
+import { DecimalPipe } from '@angular/common';
 import { RecipeService } from '../recipes/recipe.service';
 import { OrderService } from './order.service';
-import { RecipeSummary } from '../../core/models/recipe.model';
-import { OrderItemDto, OrderResultDto } from '../../core/models/order.model';
+import { RecipeSummary, RecipeDetail } from '../../core/models/recipe.model';
+import { OrderResultDto, shopSearchUrl } from '../../core/models/order.model';
 
 type View = 'setup' | 'loading' | 'result';
 
@@ -30,7 +29,7 @@ type View = 'setup' | 'loading' | 'result';
     MatFormFieldModule, MatInputModule, MatAutocompleteModule,
     MatProgressSpinnerModule, MatCardModule, MatSnackBarModule,
     MatDividerModule, MatChipsModule,
-    DecimalPipe, CurrencyPipe, AsyncPipe,
+    DecimalPipe,
   ],
   template: `
     <mat-toolbar color="primary">
@@ -74,6 +73,23 @@ type View = 'setup' | 'loading' | 'result';
                 <mat-error>Minimum 1 litre</mat-error>
               </mat-form-field>
 
+              @if (loadingRecipe()) {
+                <div class="preview-loading">
+                  <mat-spinner diameter="16"></mat-spinner>
+                  <span>Loading recipe…</span>
+                </div>
+              } @else if (previewIngredients()) {
+                <p class="preview-label">Scaled ingredients for {{ volumeSignal() }}L</p>
+                <div class="preview-table">
+                  @for (ing of previewIngredients()!; track ing.name) {
+                    <div class="preview-row">
+                      <span class="preview-name">{{ ing.name }}</span>
+                      <span class="preview-amount">{{ ing.amount | number:'1.0-3' }} {{ ing.unit }}</span>
+                    </div>
+                  }
+                </div>
+              }
+
             </mat-card-content>
           </mat-card>
 
@@ -89,12 +105,19 @@ type View = 'setup' | 'loading' | 'result';
     @if (view() === 'loading') {
       <div class="loading-screen">
         <mat-spinner diameter="56"></mat-spinner>
-        <p class="loading-text">Searching shops for best prices…</p>
+        <p class="loading-text">Searching German homebrew shops for the best prices…</p>
         <p class="loading-sub">This may take up to 30 seconds</p>
       </div>
     }
 
     @if (view() === 'result' && result()) {
+      @if (hasMissingPrices()) {
+        <div class="warning-banner">
+          <mat-icon>warning</mat-icon>
+          <span>{{ missingCount() }} ingredient{{ missingCount() > 1 ? 's' : '' }} could not be priced — verify manually</span>
+        </div>
+      }
+
       <div class="container result-container">
         <mat-card class="summary-card">
           <mat-card-content>
@@ -121,11 +144,10 @@ type View = 'setup' | 'loading' | 'result';
                 <mat-chip class="amount-chip">{{ item.requiredAmount | number:'1.0-3' }} {{ item.unit }}</mat-chip>
               </div>
 
-              @if (item.searchNote) {
-                <p class="search-note">{{ item.searchNote }}</p>
-              }
-
               @if (item.bestOffer) {
+                @if (item.searchNote) {
+                  <p class="search-note">{{ item.searchNote }}</p>
+                }
                 <div class="offer best-offer">
                   <div class="offer-header">
                     <mat-icon class="offer-icon best">star</mat-icon>
@@ -136,12 +158,15 @@ type View = 'setup' | 'loading' | 'result';
                     {{ item.bestOffer.packagesNeeded }}× {{ item.bestOffer.packageSize }} ·
                     {{ item.bestOffer.pricePerUnit }}
                   </div>
-                  <a [href]="item.bestOffer.productUrl" target="_blank" rel="noopener" class="shop-link">
-                    <mat-icon>open_in_new</mat-icon> View product
+                  <a [href]="searchUrl(item.bestOffer.shopDomain, item.ingredientName)" target="_blank" rel="noopener" class="shop-link">
+                    <mat-icon>search</mat-icon> Search on {{ item.bestOffer.shopName }}
                   </a>
                 </div>
               } @else {
-                <div class="no-offer">No price found — search manually</div>
+                <div class="no-offer">
+                  <mat-icon class="warn-icon">warning</mat-icon>
+                  <span>{{ item.searchNote ?? 'No price found — search manually' }}</span>
+                </div>
               }
 
               @if (item.alternativeOffer) {
@@ -152,8 +177,8 @@ type View = 'setup' | 'loading' | 'result';
                     <span class="shop-name">{{ item.alternativeOffer.shopName }}</span>
                     <span class="offer-price">{{ item.alternativeOffer.price | number:'1.2-2' }} EUR</span>
                   </div>
-                  <a [href]="item.alternativeOffer.productUrl" target="_blank" rel="noopener" class="shop-link">
-                    <mat-icon>open_in_new</mat-icon> View product
+                  <a [href]="searchUrl(item.alternativeOffer.shopDomain, item.ingredientName)" target="_blank" rel="noopener" class="shop-link">
+                    <mat-icon>search</mat-icon> Search on {{ item.alternativeOffer.shopName }}
                   </a>
                 </div>
               }
@@ -161,13 +186,23 @@ type View = 'setup' | 'loading' | 'result';
           </mat-card>
         }
       </div>
+
+      <div class="sticky-footer">
+        <div class="footer-total">
+          <mat-icon>euro</mat-icon>
+          <span>{{ result()!.estimatedTotalMin | number:'1.2-2' }} – {{ result()!.estimatedTotalMax | number:'1.2-2' }} EUR</span>
+        </div>
+        <button mat-raised-button color="primary" (click)="copyShoppingList()">
+          <mat-icon>content_copy</mat-icon> Copy List
+        </button>
+      </div>
     }
   `,
   styles: [`
     :host { display: flex; flex-direction: column; height: 100%; background: #1a1a1a; }
     .spacer { flex: 1; }
     .container { padding: 16px; overflow-y: auto; flex: 1; }
-    .result-container { padding-bottom: 24px; }
+    .result-container { padding-bottom: 8px; }
     .form-card, .summary-card, .item-card {
       background: #2a2a2a !important;
       color: rgba(255,255,255,.87) !important;
@@ -198,6 +233,19 @@ type View = 'setup' | 'loading' | 'result';
       color: rgba(255,255,255,.38) !important;
     }
 
+    /* ingredient preview */
+    .preview-loading { display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,.5); font-size: 13px; padding: 6px 0; }
+    .preview-label { font-size: 12px; color: rgba(255,255,255,.45); margin: 8px 0 4px; }
+    .preview-table { background: rgba(255,255,255,.04); border-radius: 4px; overflow: hidden; }
+    .preview-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 6px 8px; font-size: 13px;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .preview-row:last-child { border-bottom: none; }
+    .preview-name { color: rgba(255,255,255,.7); }
+    .preview-amount { color: rgba(255,255,255,.5); font-size: 12px; }
+
     /* loading */
     .loading-screen {
       flex: 1;
@@ -210,6 +258,20 @@ type View = 'setup' | 'loading' | 'result';
     }
     .loading-text { font-size: 16px; margin: 0; }
     .loading-sub { font-size: 13px; color: rgba(255,255,255,.45); margin: 0; }
+
+    /* warning banner */
+    .warning-banner {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background: rgba(255, 152, 0, .12);
+      border-bottom: 1px solid rgba(255, 152, 0, .3);
+      color: #ffa726;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+    .warning-banner mat-icon { font-size: 18px; width: 18px; height: 18px; }
 
     /* result */
     .summary-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
@@ -235,8 +297,25 @@ type View = 'setup' | 'loading' | 'result';
     .offer-detail { font-size: 12px; color: rgba(255,255,255,.5); margin-bottom: 4px; padding-left: 26px; }
     .shop-link { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #C17817; text-decoration: none; padding-left: 26px; }
     .shop-link mat-icon { font-size: 14px; width: 14px; height: 14px; }
-    .no-offer { font-size: 13px; color: rgba(255,255,255,.4); padding: 8px 0; }
+    .no-offer {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 13px; color: rgba(255,255,255,.5); padding: 6px 0;
+    }
+    .warn-icon { font-size: 16px; width: 16px; height: 16px; color: #ffa726; }
     mat-divider { margin: 8px 0; border-color: rgba(255,255,255,.1) !important; }
+
+    /* sticky footer */
+    .sticky-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: #2a2a2a;
+      border-top: 1px solid rgba(255,255,255,.1);
+      flex-shrink: 0;
+    }
+    .footer-total { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 600; color: rgba(255,255,255,.87); }
+    .footer-total mat-icon { color: #ffa726; font-size: 18px; width: 18px; height: 18px; }
   `]
 })
 export class OrderNewComponent implements OnInit {
@@ -249,8 +328,11 @@ export class OrderNewComponent implements OnInit {
   readonly view = signal<View>('setup');
   readonly result = signal<OrderResultDto | null>(null);
   readonly selectedRecipeId = signal<string | null>(null);
+  readonly selectedRecipe = signal<RecipeDetail | null>(null);
+  readonly loadingRecipe = signal(false);
   readonly recipes = signal<RecipeSummary[]>([]);
   readonly loadingRecipes = signal(true);
+  readonly volumeSignal = signal<number>(20);
 
   readonly form = this.fb.group({
     recipeName: ['', Validators.required],
@@ -264,6 +346,24 @@ export class OrderNewComponent implements OnInit {
     );
   });
 
+  readonly previewIngredients = computed(() => {
+    const recipe = this.selectedRecipe();
+    const vol = this.volumeSignal();
+    if (!recipe || vol < 1) return null;
+    const scale = vol / recipe.baseVolumeL;
+    return recipe.ingredients
+      .slice()
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map(ing => ({
+        name: ing.name,
+        amount: Math.round(ing.amount * scale * 1000) / 1000,
+        unit: ing.unit,
+      }));
+  });
+
+  readonly missingCount = computed(() => this.result()?.items.filter(i => !i.bestOffer).length ?? 0);
+  readonly hasMissingPrices = computed(() => this.missingCount() > 0);
+
   ngOnInit() {
     this.recipeService.getRecipes(0, 200).subscribe({
       next: page => {
@@ -271,6 +371,9 @@ export class OrderNewComponent implements OnInit {
         this.loadingRecipes.set(false);
       },
       error: () => this.loadingRecipes.set(false)
+    });
+    this.form.get('volumeL')!.valueChanges.subscribe(val => {
+      if (val != null && val >= 1) this.volumeSignal.set(val);
     });
   }
 
@@ -282,6 +385,15 @@ export class OrderNewComponent implements OnInit {
 
   onRecipeSelected(r: RecipeSummary) {
     this.selectedRecipeId.set(r.id);
+    this.selectedRecipe.set(null);
+    this.loadingRecipe.set(true);
+    this.recipeService.getRecipe(r.id).subscribe({
+      next: detail => {
+        this.selectedRecipe.set(detail);
+        this.loadingRecipe.set(false);
+      },
+      error: () => this.loadingRecipe.set(false)
+    });
   }
 
   generate() {
@@ -301,6 +413,41 @@ export class OrderNewComponent implements OnInit {
         this.snackBar.open(msg, 'Dismiss', { duration: 5000 });
       }
     });
+  }
+
+  copyShoppingList() {
+    const r = this.result();
+    if (!r) return;
+    const lines: string[] = [
+      `Order List: ${r.recipeName} (${r.volumeL}L)`,
+      `Generated: ${new Date(r.generatedAt).toLocaleDateString()}`,
+      '',
+    ];
+    for (const item of r.items) {
+      lines.push(`${item.ingredientName} - ${item.requiredAmount} ${item.unit}`);
+      if (item.bestOffer) {
+        const url = shopSearchUrl(item.bestOffer.shopDomain, item.ingredientName);
+        lines.push(`  Best: ${item.bestOffer.shopName} - €${item.bestOffer.totalCost.toFixed(2)} - ${url}`);
+      } else {
+        lines.push(`  No price found${item.searchNote ? ` (${item.searchNote})` : ''}`);
+      }
+      if (item.alternativeOffer) {
+        const url = shopSearchUrl(item.alternativeOffer.shopDomain, item.ingredientName);
+        lines.push(`  Alt: ${item.alternativeOffer.shopName} - €${item.alternativeOffer.price.toFixed(2)} - ${url}`);
+      }
+      lines.push('');
+    }
+    lines.push(`Total: €${r.estimatedTotalMin.toFixed(2)} – €${r.estimatedTotalMax.toFixed(2)}`);
+    lines.push(r.disclaimer);
+
+    navigator.clipboard.writeText(lines.join('\n')).then(
+      () => this.snackBar.open('Copied to clipboard!', undefined, { duration: 2000 }),
+      () => this.snackBar.open('Copy failed — try again', undefined, { duration: 2000 })
+    );
+  }
+
+  searchUrl(shopDomain: string, ingredient: string): string {
+    return shopSearchUrl(shopDomain, ingredient);
   }
 
   back() {

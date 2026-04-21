@@ -9,7 +9,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatChipsModule } from '@angular/material/chips';
 import { DecimalPipe, DatePipe } from '@angular/common';
 import { OrderService } from './order.service';
-import { OrderResultDto, OrderSummaryDto } from '../../core/models/order.model';
+import { OrderResultDto, OrderSummaryDto, shopSearchUrl } from '../../core/models/order.model';
 
 @Component({
   selector: 'app-order-history',
@@ -68,8 +68,8 @@ import { OrderResultDto, OrderSummaryDto } from '../../core/models/order.model';
                   <span class="shop-name">{{ item.bestOffer.shopName }}</span>
                   <span class="price">{{ item.bestOffer.totalCost | number:'1.2-2' }} EUR</span>
                 </div>
-                <a [href]="item.bestOffer.productUrl" target="_blank" rel="noopener" class="shop-link">
-                  <mat-icon>open_in_new</mat-icon> View product
+                <a [href]="searchUrl(item.bestOffer.shopDomain, item.ingredientName)" target="_blank" rel="noopener" class="shop-link">
+                  <mat-icon>search</mat-icon> Search on {{ item.bestOffer.shopName }}
                 </a>
               } @else {
                 <span class="no-offer">No price found</span>
@@ -181,6 +181,10 @@ export class OrderHistoryComponent implements OnInit {
 
   newOrder() {
     this.router.navigate(['/order/new']);
+  }
+
+  searchUrl(shopDomain: string, ingredient: string): string {
+    return shopSearchUrl(shopDomain, ingredient);
   }
 
   back() {

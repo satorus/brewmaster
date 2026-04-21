@@ -84,7 +84,7 @@ All DTOs are Java records. Use `@NotNull`, `@DecimalMin`, etc. for validation on
 
 ### Database migrations
 
-All schema changes via Flyway in `backend/src/main/resources/db/migration/`. Current migrations: V1 (init schema), V2 (seed data), V3 (recipe indexes), V4 (brew session snapshot columns). Next is V5. Production uses `ddl-auto: validate` — Hibernate will refuse to start if the entity model doesn't match the DB schema.
+All schema changes via Flyway in `backend/src/main/resources/db/migration/`. Current migrations: V1 (init schema), V2 (seed data), V3 (recipe indexes), V4 (brew session snapshot columns), V5 (order_lists table), V6 (add estimated_total_min/max columns to order_lists). Next is V7. Production uses `ddl-auto: validate` — Hibernate will refuse to start if the entity model doesn't match the DB schema.
 
 ### Testing
 

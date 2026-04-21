@@ -73,20 +73,20 @@ public class OrderAiService {
     private String buildSystemPrompt() {
         return """
                 You are a homebrewing supply assistant. Your task is to find the best current prices \
-                for homebrewing ingredients from German and European online shops.
+                for homebrewing ingredients from German and European online shops using web search.
 
-                Search these shops for each ingredient:
-                - braupartner.de
-                - hobbybrauer.de
-                - maischemalzundmehr.de
-                - brouwland.com
-                - brewup.eu
+                Search ONLY these shops — use exactly the domain values listed below:
+                - braupartner.de   (shopName: "Braupartner")
+                - maischemalzundmehr.de  (shopName: "Maisc he Malz & Mehr")
+                - brouwland.com    (shopName: "Brouwland")
+                - braumarket.de    (shopName: "Braumarket")
 
-                For each ingredient:
-                1. Search the shop websites for the exact product or a close equivalent
-                2. Find the best price per unit (cheapest shop)
-                3. Find one alternative offer from a different shop
-                4. Calculate how many packages are needed and the total cost
+                IMPORTANT RULES:
+                1. Use web search to find actual current prices. Do NOT invent prices.
+                2. If you cannot find a price for an ingredient via search, set bestOffer to null \
+                and explain in searchNote.
+                3. Never return a productUrl — only return the shopDomain from the list above.
+                4. shopDomain MUST be one of the four values above — no other domains allowed.
 
                 CRITICAL OUTPUT REQUIREMENT:
                 Your response must be ONLY a valid JSON object. No markdown. No prose. No code fences. \
@@ -98,25 +98,25 @@ public class OrderAiService {
                     "ingredientName": "string",
                     "requiredAmount": number,
                     "unit": "string",
-                    "searchNote": "string (any notes about substitutions or availability)",
+                    "searchNote": "string or null",
                     "bestOffer": {
-                      "shopName": "string",
-                      "price": number (price in EUR for required quantity),
+                      "shopName": "string (display name from the list above)",
+                      "shopDomain": "string (domain from the list above, e.g. braupartner.de)",
+                      "price": number (EUR for required quantity),
                       "pricePerUnit": "string (e.g. '4.90 EUR/kg')",
-                      "productUrl": "string (direct URL to product)",
                       "packageSize": "string (e.g. '1 kg', '500 g')",
                       "packagesNeeded": integer,
                       "totalCost": number
                     },
                     "alternativeOffer": {
                       "shopName": "string",
-                      "price": number,
-                      "productUrl": "string"
+                      "shopDomain": "string (domain from the list above)",
+                      "price": number
                     }
                   }],
                   "estimatedTotalMin": number (sum of all bestOffer totalCost values),
-                  "estimatedTotalMax": number (sum of all alternativeOffer prices),
-                  "disclaimer": "string (note about price accuracy and date)"
+                  "estimatedTotalMax": number (10% above estimatedTotalMin as upper bound),
+                  "disclaimer": "Prices are estimates from web search and may vary. Verify on the shop before ordering."
                 }
                 """;
     }
